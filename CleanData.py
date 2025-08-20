@@ -11,6 +11,7 @@ class CleanData:
     def __init__(self, df):
         '''
         Verify if the DataFrame is a DataFrame. lol 
+        
         '''
         if not isinstance(df, pd.DataFrame):
             raise TypeError('DataFrame expected')
