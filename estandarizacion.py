@@ -16,7 +16,7 @@ class Standardization:
         Verify if X and y are DataFrames. lol
         
         '''
-        if not isinstance(X, pd.DataFrame) and not isinstance(y, pd.DataFrame):
+        if not( isinstance(X, pd.DataFrame)) and not( isinstance(y, pd.DataFrame)):
             raise TypeError('X and y must be a DataFrame')
         self.X=X.copy()
         self.y=y.copy()
