@@ -45,3 +45,4 @@ class SplitData:
         y_test = self.y.iloc[indices[split:]]
 
         return X_train, X_test, y_train, y_test
+        

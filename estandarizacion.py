@@ -52,7 +52,7 @@ class Standardization:
         ystd = np.std(yval, axis=0)
         ys = (y-yprom)/ystd
 
-        return Xs,ys
+        return Xs,ys,yprom,ystd,Xprom,Xstd
 
 
 
