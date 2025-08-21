@@ -30,11 +30,14 @@ class SplitData:
         
         """
         # Generate random indices for splitting the data
+        if not (self.test_size>=0 and self.test_size<1):
+            raise ValueError('test_size must be between 0 and 1')
+        if not (isinstance(self.random_state, int) and self.random_state>=0):
+            raise TypeError('random_state must be an integer positive number')
         if self.random_state is not None:
             np.random.seed(self.random_state)
         indices = np.random.permutation(len(self.X))
         split = int(len(self.X) * self.test_size)
-
         # Split the data into training and testing sets
         X_train = self.X.iloc[indices[:split]]
         X_test = self.X.iloc[indices[split:]]
