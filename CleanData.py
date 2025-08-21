@@ -5,19 +5,14 @@ This script is used to clean the data from dataset file.
 
 """ Importing libraries """
 import pandas as pd
+import numpy as np
 """ MAIN """
 
 class CleanData:
-    def __init__(self, df):
-        '''
-        Verify if the DataFrame is a DataFrame. lol 
-        
-        '''
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError('DataFrame expected')
-        self.df=df.copy()
+    def __init__(self):
+       self.df = None
    
-    def clean_nans(self, axis=0, method='drop', fill_value=None):
+    def clean_nans(self,df, axis=0, method='drop', fill_value=None):
         ''' 
         This function cleans the NaNs from the DataFrame.
 
@@ -37,24 +32,28 @@ class CleanData:
         ValueError: If the arguments are not valid.
         -------
         '''
+        # Validate input df
+        if df is None:
+            raise TypeError('df must be a pandas DataFrame or numpy array')
+        if isinstance(df, np.ndarray):
+            df = pd.DataFrame(df)
+        elif not isinstance(df, pd.DataFrame):
+            raise TypeError('df must be a pandas DataFrame or numpy array')
+
+        # Validate axis and method
+        if axis not in (0, 1):
+            raise ValueError('axis must be 0 (rows) or 1 (columns)')
         if method not in ['drop', 'fill']:
             raise ValueError('Method must be either "drop" or "fill"')
+
+        # Apply cleaning
         if method == 'drop':
-           cleaned_df= self.df.dropna(axis=axis)
+            cleaned_df = df.dropna(axis=axis)
         else:
             if fill_value is None:
                 raise ValueError('fill_value must be specified')
-            cleaned_df =self.df.fillna(fill_value)
+            cleaned_df = df.fillna(fill_value)
+
+        self.df = cleaned_df
         return cleaned_df
         
-    def get_cleaned_data(self):
-
-        ''' 
-        This function returns the cleaned DataFrame.
-        
-        Returns
-        pd.DataFrame: DataFrame limpio.
-        
-        '''
-
-        return self.df
