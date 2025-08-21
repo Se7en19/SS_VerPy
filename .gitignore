@@ -50,3 +50,4 @@ venv.bak/
 # Sistema
 .DS_Store
 Thumbs.db
+PCR.py
