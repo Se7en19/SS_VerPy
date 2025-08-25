@@ -6,11 +6,20 @@ by: Se7en19
 """ Importing libraries """
 import pandas as pd
 import numpy as np
+import time
+import logging
 from pandas.core.base import NoNewAttributesMixin
 import CleanData as cd 
 import split_data as sd
 import estandarizacion as st 
 from sklearn.decomposition import PCA
+
+# Configure logging for debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 """ MAIN """
 
@@ -31,9 +40,13 @@ class PCR:
         self.y_test = None
         self.eta = None 
         self.numEpochs = None
-        self.numComponents=None
+        self.numComponents = None
         
-    def PCR(self,X,y,eta,numEpochs,test_size,random_state,numComponents):
+        self.training_time = None
+        self.pca_time = None
+        self.initialization_time = None
+        
+    def PCR(self, X, y, eta, numEpochs, test_size, random_state, numComponents):
         """
         This function trains the PCR model.
 
@@ -45,82 +58,220 @@ class PCR:
         numEpochs: int with the number of epochs.
         test_size: float with the size of the testing set.
         random_state: int with the random state.
+        numComponents: int with the number of PCA components.
 
         Returns
-        X_train, X_test, y_train, y_test: DataFrames with the training and testing sets.
+        X_test, y_test, Xstd, Xprom, w, ystd, yprom, coeff, score, latent, MSE
         
         """
-        if X or y is None:
-            raise TypeError('The input (X,y) must be a pandas DataFrame or numpy array')
+        start_time = time.time()
+        logger.info("Starting PCR model training")
+        
+        # Improved validations with informative messages
+        self._validate_inputs(X, y, eta, numEpochs, test_size, random_state, numComponents)
+        
+        # Variables initialization
+        init_start = time.time()
+        self._initialize_variables(X, y, eta, numEpochs, test_size, random_state, numComponents)
+        self.initialization_time = time.time() - init_start
+        logger.info(f"Initialization time: {self.initialization_time:.4f} seconds")
+
+        # Data cleaning
+        logger.info("Cleaning data...")
+        cleaner = cd.CleanData()
+        self.X = cleaner.clean_nans(self.X)
+        self.y = cleaner.clean_nans(self.y)
+        logger.info(f"Clean data - X: {self.X.shape}, y: {self.y.shape}")
+
+        # Train/test split
+        logger.info("Splitting data into train/test...")
+        splitter = sd.SplitData(self.X, self.y, self.test_size, self.random_state)
+        self.X_train, self.X_test, self.y_train, self.y_test = splitter.split_data()
+        logger.info(f"Train: {self.X_train.shape}, Test: {self.X_test.shape}")
+
+        # Standardization
+        logger.info("Standardizing data...")
+        standardizer = st.Standardization(self.X_train, self.y_train)
+        self.Xs, self.ys, self.yprom, self.ystd, self.Xprom, self.Xstd = standardizer.standardize(self.X_train, self.y_train)
+        logger.info("Standardization completed")
+
+        # PCA
+        pca_start = time.time()
+        logger.info(f"Applying PCA with {numComponents} components...")
+        self._apply_pca(numComponents)
+        self.pca_time = time.time() - pca_start
+        logger.info(f"PCA completed in {self.pca_time:.4f} seconds")
+
+        # Perceptron training
+        logger.info("Starting perceptron training...")
+        self._train_perceptron(numEpochs)
+        
+        self.training_time = time.time() - start_time
+        logger.info(f"Training completed in {self.training_time:.4f} seconds")
+        logger.info(f"Total time: {self.training_time:.4f} seconds")
+        
+        return (self.X_test, self.y_test, self.Xstd, self.Xprom, self.w, 
+                self.ystd, self.yprom, self.coeff, self.score, self.latent, self.MSE)
+
+    def _validate_inputs(self, X, y, eta, numEpochs, test_size, random_state, numComponents):
+        """Improved input validation"""
+        logger.debug("Validating inputs...")
+        
+        # Validate X and y
+        if X is None or y is None:
+            raise ValueError('X,y cant be None')
+        
+        # Validate types
+        if not (isinstance(X, pd.DataFrame) and isinstance(y, pd.DataFrame)):
+            raise TypeError('X and y must be DataFrames or numpy arrays')
+        
+        
+        # Convert numpy arrays to DataFrames if needed
         if isinstance(X, np.ndarray):
             X = pd.DataFrame(X)
-        elif isinstance(y, np.ndarray):
+            logger.debug("X converted from numpy array to DataFrame")
+        if isinstance(y, np.ndarray):
             y = pd.DataFrame(y)
-        elif not( isinstance(X, pd.DataFrame) and isinstance(y, pd.DataFrame)):
-            raise TypeError('X and y must be a DataFrame')
+            logger.debug("y converted from numpy array to DataFrame")
+        
+        
+        # Validate shapes
+        if X.shape[0] > y.shape[0]:
+            # we obtain the number of measuring of y
+            m = y.shape[0]
+            X = X.iloc[ :m , : ]
+        elif X.shape[0] < y.shape[0]:
+            # we obtain the number of measuring of X
+            m = X.shape[0]
+            y = y.iloc[ :m , : ]
+        # Validate numeric parameters
+        if not (0 < eta < 1):
+            raise ValueError(f'eta must be between 0 and 1, received: {eta}')
+        if numEpochs <= 0:
+            raise ValueError(f'numEpochs must be positive, received: {numEpochs}')
+        if not (0 < test_size < 1):
+            raise ValueError(f'test_size must be between 0 and 1, received: {test_size}')
+        if numComponents <= 0:
+            raise ValueError(f'numComponents must be positive, received: {numComponents}')
+        
+        logger.info("Input validation completed successfully")
 
-
-        """ Variables """
+    def _initialize_variables(self, X, y, eta, numEpochs, test_size, random_state, numComponents):
+        """Class variables initialization"""
         self.X = X.copy()
         self.y = y.copy()
         self.eta = eta
         self.numEpochs = numEpochs
         self.test_size = test_size
         self.random_state = random_state
+        
+        # Parameters log
+        logger.debug(f"Parameters: eta={eta}, epochs={numEpochs}, test_size={test_size}, components={numComponents}")
 
-        """ We used the CleanData class to clean the data """
-        cd = cd.CleanData()
-        self.X=cd.clean_nans(self.X)
-        self.y=cd.clean_nans(self.y)
-
-        ''' We used the split_data class to split the data '''
-        sd = sd.SplitData(self.X,self.y,self.test_size,self.random_state)
-        self.X_train,self.X_test,self.y_train,self.y_test = sd.split_data()
-
-        """ We used estandarizacion class to standardize the data """
-        st = st.Standardization(self.X_train,self.y_train)
-        self.Xs,self.ys, self.yprom, self.ystd,self.Xprom,self.Xstd= st.standardize(self.X_train,self.y_train)
-
-
-        ###############################################################################################
-
-        ###############################################################################################
-
-        """ We processing the data in pca method"""
-        if numComponents>self.Xs.shape[1]: # Dont forget that Xs is X_train but standardized
-            raise ValueError('numComponents must be less than the number of features')
-        pca = PCA(numComponents)
+    def _apply_pca(self, numComponents):
+        """Apply PCA with validations"""
+        if numComponents > self.Xs.shape[1]:
+            raise ValueError(f'numComponents ({numComponents}) must be less than the number of features ({self.Xs.shape[1]})')
+        
+        pca = PCA(n_components=numComponents)
         pca.fit(self.Xs)
-        """ Transforming the data of the training set (Features) """
+        
+        # Transform training data
         self.score = pca.transform(self.Xs)
+        
+        # Save PCA results
+        self.coeff = pca.components_
+        self.latent = pca.explained_variance_
+        
+        logger.debug(f"PCA applied: {self.score.shape}, explained variance: {np.sum(pca.explained_variance_ratio_):.4f}")
 
-        """ We obtain the number of measurings of the features """
+    def _train_perceptron(self, numEpochs):
+        """Perceptron training with convergence monitoring"""
         m = self.score.shape[0]
-        X_transformed_pca = np.concatenate((np.ones((m,1)), self.score), axis=1) # Here, we've added a column of ones to matrix 
-                                                                                 # of features
-
-        """ we define the number of features """
-        n = X_transformed_pca.shape[1]
-
-        """
-        This apart we going to make the perceptron model
-        """
-
-        """ Variables for the perceptron model """
-        self.w = np.zeros((n,1))
-        self.MSE = np.zeros((m,1))
-        self.wEpocas = np.zeros(n,numEpochs)
-
-        """ Training """
+        n = self.score.shape[1] + 1  # +1 for bias
+        
+        # Prepare features matrix with bias
+        X_transformed_pca = np.concatenate((np.ones((m, 1)), self.score), axis=1)
+        
+        # Initialize weights and metrics
+        self.w = np.zeros((n, 1))
+        self.MSE = np.zeros(numEpochs)
+        self.wEpocas = np.zeros((n, numEpochs))
+        
+        # Convergence monitoring
+        best_mse = float('inf')
+        patience_counter = 0
+        patience = max(10, numEpochs // 10)  # 10% of epochs as patience
+        
+        logger.info(f"Starting training: {m} samples, {n} features")
+        
         for i in range(numEpochs):
-            # Calculating the gradiente 
-            self.nablaMSE = 2@X_transformed_pca.T@(X_transformed_pca*self.w-self.ys)/m
-            # we update the weights
-            self.w = self.w - self.eta*self.nablaMSE
-            # We save the current values of the weights
-            self.wEpocas[:,i] = self.w
-            # We determine the perfomance the our model
-            ypred = X_transformed_pca@self.w@self.ystd + self.yprom
-            # We determine the MSE in the training
-            self.MSE = np.sum((self.X_train*self.w-self.y_train)**2)/m
+            # Forward pass and gradient calculation
+            y_pred = X_transformed_pca @ self.w
+            error = y_pred - self.ys
+            nablaMSE = 2 * X_transformed_pca.T @ error / m
+            
+            # Weights update
+            self.w = self.w - self.eta * nablaMSE
+            
+            # Save epoch weights
+            self.wEpocas[:, i] = self.w.flatten()
+            
+            # Compute MSE in original scale
+            ypred_original = y_pred * self.ystd + self.yprom
+            current_mse = np.sqrt(np.sum((ypred_original.flatten() - self.y_train.values.flatten())**2) / m)
+            self.MSE[i] = current_mse
+            
+            # Convergence monitoring
+            if current_mse < best_mse:
+                best_mse = current_mse
+                patience_counter = 0
+            else:
+                patience_counter += 1
+            
+            # Log every 10% of epochs
+            if (i + 1) % max(1, numEpochs // 10) == 0:
+                logger.info(f"Epoch {i+1}/{numEpochs}: MSE = {current_mse:.6f}")
+            
+            # Early stopping if there is no improvement
+            if patience_counter >= patience:
+                logger.info(f"Early stopping at epoch {i+1} - No improvement in {patience} epochs")
+                # Adjust arrays to the actual size
+                self.MSE = self.MSE[:i+1]
+                self.wEpocas = self.wEpocas[:, :i+1]
+                break
+        
+        logger.info(f"Training completed. Best MSE: {best_mse:.6f}")
+
+    def get_performance_metrics(self):
+        """Get model performance metrics"""
+        return {
+            'training_time': self.training_time,
+            'pca_time': self.pca_time,
+            'initialization_time': self.initialization_time,
+            'final_mse': self.MSE[-1] if len(self.MSE) > 0 else None,
+            'best_mse': np.min(self.MSE) if len(self.MSE) > 0 else None,
+            'convergence_epochs': len(self.MSE),
+            'total_epochs': self.numEpochs
+        }
+
+    def predict(self, X_new):
+        """Make predictions with the trained model"""
+        if not hasattr(self, 'w') or self.w is None:
+            raise ValueError("The model must be trained before making predictions")
+        
+        # Standardize new data
+        X_new_std = (X_new - self.Xprom) / self.Xstd
+        
+        # Apply PCA
+        X_new_pca = PCA(n_components=self.score.shape[1]).fit_transform(X_new_std)
+        
+        # Add bias
+        X_new_with_bias = np.concatenate((np.ones((X_new_pca.shape[0], 1)), X_new_pca), axis=1)
+        
+        # Prediction
+        y_pred_std = X_new_with_bias @ self.w
+        y_pred = y_pred_std * self.ystd + self.yprom
+        
+        return y_pred
 
