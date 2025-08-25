@@ -13,7 +13,7 @@ import pandas as pd
 class Standardization:
     def __init__(self, X,y):
         '''
-        Verify if X and y are DataFrames. lol
+        Verify if X and y are DataFrames.
         
         '''
         if not( isinstance(X, pd.DataFrame)) and not( isinstance(y, pd.DataFrame)):

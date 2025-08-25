@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de testing para debuggear y medir el rendimiento del modelo PCR
+Testing script to debug and measure the performance of the PCR model
 """
 
 import numpy as np
@@ -11,37 +11,37 @@ import pstats
 from PCR import PCR
 
 def create_test_data(n_samples=1000, n_features=10, noise_level=0.1):
-    """Crear datos de prueba sintéticos"""
-    print("🔧 Creando datos de prueba...")
+    """Create synthetic test data"""
+    print("Creating test data...")
     
-    # Generar features aleatorias
+    # Generate random features
     np.random.seed(42)
     X = np.random.randn(n_samples, n_features)
     
-    # Crear target con relación lineal + ruido
+    # Create target with linear relationship + noise
     true_weights = np.random.randn(n_features)
     y = X @ true_weights + noise_level * np.random.randn(n_samples)
     
-    # Convertir a DataFrames
+    # Convert to DataFrames
     X_df = pd.DataFrame(X, columns=[f'feature_{i}' for i in range(n_features)])
     y_df = pd.DataFrame(y, columns=['target'])
     
-    print(f"✅ Datos creados: X={X_df.shape}, y={y_df.shape}")
+    print(f" Data created: X={X_df.shape}, y={y_df.shape}")
     return X_df, y_df
 
 def test_pcr_basic():
-    """Test básico del modelo PCR"""
-    print("\n🧪 TEST BÁSICO DEL MODELO PCR")
+    """Basic test of the PCR model"""
+    print("\n BASIC TEST OF THE PCR MODEL")
     print("=" * 50)
     
-    # Crear datos de prueba
+    # Create test data
     X, y = create_test_data(n_samples=500, n_features=5)
     
-    # Crear y entrenar modelo
+    # Create and train model
     pcr_model = PCR()
     
     try:
-        print("\n🚀 Entrenando modelo...")
+        print("\n Training model...")
         results = pcr_model.PCR(
             X=X, 
             y=y, 
@@ -52,78 +52,78 @@ def test_pcr_basic():
             numComponents=3
         )
         
-        print("✅ Entrenamiento exitoso!")
+        print("Training successful!")
         
-        # Mostrar métricas de rendimiento
+        # Show performance metrics
         metrics = pcr_model.get_performance_metrics()
-        print("\n📊 MÉTRICAS DE RENDIMIENTO:")
-        print(f"   Tiempo total: {metrics['training_time']:.4f} segundos")
-        print(f"   Tiempo PCA: {metrics['pca_time']:.4f} segundos")
-        print(f"   Tiempo inicialización: {metrics['initialization_time']:.4f} segundos")
-        print(f"   MSE final: {metrics['final_mse']:.6f}")
-        print(f"   Mejor MSE: {metrics['best_mse']:.6f}")
-        print(f"   Épocas de convergencia: {metrics['convergence_epochs']}")
+        print("\n PERFORMANCE METRICS:")
+        print(f"   Total time: {metrics['training_time']:.4f} seconds")
+        print(f"   PCA time: {metrics['pca_time']:.4f} seconds")
+        print(f"   Initialization time: {metrics['initialization_time']:.4f} seconds")
+        print(f"   Final MSE: {metrics['final_mse']:.6f}")
+        print(f"   Best MSE: {metrics['best_mse']:.6f}")
+        print(f"   Convergence epochs: {metrics['convergence_epochs']}")
         
-        # Mostrar resultados
-        print(f"\n📈 RESULTADOS:")
-        print(f"   Coeficientes PCA: {pcr_model.coeff.shape}")
-        print(f"   Varianza explicada: {pcr_model.latent}")
-        print(f"   Pesos finales: {pcr_model.w.shape}")
+        # Show results
+        print(f"\n RESULTS:")
+        print(f"   PCA coefficients: {pcr_model.coeff.shape}")
+        print(f"   Explained variance: {pcr_model.latent}")
+        print(f"   Final weights: {pcr_model.w.shape}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error durante el entrenamiento: {e}")
+        print(f" Error during training: {e}")
         import traceback
         traceback.print_exc()
         return False
 
 def test_pcr_edge_cases():
-    """Test de casos límite y validaciones"""
-    print("\n🧪 TEST DE CASOS LÍMITE")
+    """Edge cases and validations test"""
+    print("\n EDGE CASES TEST")
     print("=" * 50)
     
     pcr_model = PCR()
     
-    # Test 1: Datos None
-    print("\n🔍 Test 1: Datos None")
+    # Test 1: None data
+    print("\n Test 1: None data")
     try:
         pcr_model.PCR(None, None, 0.01, 100, 0.2, 42, 3)
-        print("❌ Debería haber fallado con datos None")
+        print(" It should have failed with None data")
     except ValueError as e:
-        print(f"✅ Correctamente capturado: {e}")
+        print(f" Correctly captured: {e}")
     
-    # Test 2: Parámetros inválidos
-    print("\n🔍 Test 2: Parámetros inválidos")
+    # Test 2: Invalid parameters
+    print("\n Test 2: Invalid parameters")
     X, y = create_test_data(100, 5)
     
     try:
-        pcr_model.PCR(X, y, -0.01, 100, 0.2, 42, 3)  # eta negativo
-        print("❌ Debería haber fallado con eta negativo")
+        pcr_model.PCR(X, y, -0.01, 100, 0.2, 42, 3)  # negative eta
+        print(" It should have failed with negative eta")
     except ValueError as e:
-        print(f"✅ Correctamente capturado: {e}")
+        print(f" Correctly captured: {e}")
     
     try:
         pcr_model.PCR(X, y, 0.01, 0, 0.2, 42, 3)  # epochs = 0
-        print("❌ Debería haber fallado con epochs = 0")
+        print(" It should have failed with epochs = 0")
     except ValueError as e:
-        print(f"✅ Correctamente capturado: {e}")
+        print(f" Correctly captured: {e}")
     
     try:
         pcr_model.PCR(X, y, 0.01, 100, 1.5, 42, 3)  # test_size > 1
-        print("❌ Debería haber fallado con test_size > 1")
+        print("It should have failed with test_size > 1")
     except ValueError as e:
-        print(f"✅ Correctamente capturado: {e}")
+        print(f"Correctly captured: {e}")
 
 def test_pcr_performance():
-    """Test de rendimiento con diferentes tamaños de datos"""
-    print("\n🧪 TEST DE RENDIMIENTO")
+    """Performance test with different data sizes"""
+    print("\n PERFORMANCE TEST")
     print("=" * 50)
     
     sizes = [100, 500, 1000]
     
     for size in sizes:
-        print(f"\n📊 Probando con {size} muestras...")
+        print(f"\n Testing with {size} samples...")
         X, y = create_test_data(n_samples=size, n_features=10)
         
         pcr_model = PCR()
@@ -138,22 +138,22 @@ def test_pcr_performance():
             total_time = time.time() - start_time
             metrics = pcr_model.get_performance_metrics()
             
-            print(f"   ✅ Tiempo total: {total_time:.4f}s")
-            print(f"   ✅ MSE final: {metrics['final_mse']:.6f}")
-            print(f"   ✅ Épocas: {metrics['convergence_epochs']}")
+            print(f"   Total time: {total_time:.4f}s")
+            print(f"   Final MSE: {metrics['final_mse']:.6f}")
+            print(f"   Epochs: {metrics['convergence_epochs']}")
             
         except Exception as e:
             print(f"   ❌ Error: {e}")
 
 def profile_pcr():
-    """Profiling del modelo PCR"""
-    print("\n🧪 PROFILING DEL MODELO PCR")
+    """Profiling of the PCR model"""
+    print("\n PCR MODEL PROFILING")
     print("=" * 50)
     
     X, y = create_test_data(n_samples=1000, n_features=10)
     pcr_model = PCR()
     
-    # Crear profiler
+    # Create profiler
     profiler = cProfile.Profile()
     profiler.enable()
     
@@ -165,41 +165,41 @@ def profile_pcr():
         
         profiler.disable()
         
-        # Mostrar estadísticas
+        # Show statistics
         stats = pstats.Stats(profiler)
         stats.sort_stats('cumulative')
         
-        print("📊 TOP 10 FUNCIONES MÁS LENTAS:")
+        print(" TOP 10 SLOWEST FUNCTIONS:")
         stats.print_stats(10)
         
-        print("\n📊 ESTADÍSTICAS POR ARCHIVO:")
+        print("\n STATS BY FILE:")
         stats.print_stats('PCR.py')
         
     except Exception as e:
-        print(f"❌ Error durante profiling: {e}")
+        print(f" Error during profiling: {e}")
         profiler.disable()
 
 def main():
-    """Función principal de testing"""
-    print("🚀 INICIANDO TESTS DEL MODELO PCR")
+    """Main testing function"""
+    print(" STARTING PCR MODEL TESTS")
     print("=" * 60)
     
-    # Test básico
+    # Basic test
     basic_success = test_pcr_basic()
     
     if basic_success:
-        # Test de casos límite
+        # Edge cases test
         test_pcr_edge_cases()
         
-        # Test de rendimiento
+        # Performance test
         test_pcr_performance()
         
         # Profiling
         profile_pcr()
         
-        print("\n🎉 TODOS LOS TESTS COMPLETADOS!")
+        print("\n ALL TESTS COMPLETED!")
     else:
-        print("\n❌ El test básico falló. Revisa los errores antes de continuar.")
+        print("\n Basic test failed. Check the errors before continuing.")
 
 if __name__ == "__main__":
     main()

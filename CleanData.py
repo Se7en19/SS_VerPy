@@ -26,7 +26,7 @@ class CleanData:
             Value to fill the NaNs, by default None
 
         Returns
-        pd.DataFrame: DataFrame limpio.
+        pd.DataFrame: Clean DataFrame.
 
         Raises
         ValueError: If the arguments are not valid.
