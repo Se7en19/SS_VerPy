@@ -143,7 +143,7 @@ def test_pcr_performance():
             print(f"   Epochs: {metrics['convergence_epochs']}")
             
         except Exception as e:
-            print(f"   ❌ Error: {e}")
+            print(f" Error: {e}")
 
 def profile_pcr():
     """Profiling of the PCR model"""

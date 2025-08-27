@@ -29,22 +29,22 @@ class PCR:
         This function initializes the PCR class.
         
         """
-        self.df = None
-        self.X = None
-        self.y = None
-        self.test_size = None
-        self.random_state = None
-        self.X_train = None
-        self.X_test = None
-        self.y_train = None
-        self.y_test = None
-        self.eta = None 
-        self.numEpochs = None
-        self.numComponents = None
+        # self.df = None
+        # self.X = None
+        # self.y = None
+        # self.test_size = None
+        # self.random_state = None
+        # self.X_train = None
+        # self.X_test = None
+        # self.y_train = None
+        # self.y_test = None
+        # self.eta = None 
+        # self.numEpochs = None
+        # self.numComponents = None
         
-        self.training_time = None
-        self.pca_time = None
-        self.initialization_time = None
+        # self.training_time = None
+        # self.pca_time = None
+        # self.initialization_time = None
         
     def PCR(self, X, y, eta, numEpochs, test_size, random_state, numComponents):
         """
@@ -77,6 +77,8 @@ class PCR:
         logger.info(f"Initialization time: {self.initialization_time:.4f} seconds")
 
         # Data cleaning
+        self.X = X.copy()
+        self.y = y.copy()
         logger.info("Cleaning data...")
         cleaner = cd.CleanData()
         self.X = cleaner.clean_nans(self.X)
@@ -91,7 +93,7 @@ class PCR:
 
         # Standardization
         logger.info("Standardizing data...")
-        standardizer = st.Standardization(self.X_train, self.y_train)
+        standardizer = st.Standardization()
         self.Xs, self.ys, self.yprom, self.ystd, self.Xprom, self.Xstd = standardizer.standardize(self.X_train, self.y_train)
         logger.info("Standardization completed")
 
@@ -119,31 +121,30 @@ class PCR:
         
         # Validate X and y
         if X is None or y is None:
-            raise ValueError('X,y cant be None')
+            raise TypeError('X,y can\'t be None')
         
         # Validate types
-        if not (isinstance(X, pd.DataFrame) and isinstance(y, pd.DataFrame)):
-            raise TypeError('X and y must be DataFrames or numpy arrays')
-        
-        
-        # Convert numpy arrays to DataFrames if needed
-        if isinstance(X, np.ndarray):
-            X = pd.DataFrame(X)
-            logger.debug("X converted from numpy array to DataFrame")
-        if isinstance(y, np.ndarray):
-            y = pd.DataFrame(y)
-            logger.debug("y converted from numpy array to DataFrame")
-        
+        valid_types = (pd.DataFrame, np.ndarray)
+
+        if not isinstance(X, valid_types):
+            raise TypeError("X debe ser pandas.DataFrame o numpy.ndarray")
+
+        if not isinstance(y, valid_types):
+            raise TypeError("y debe ser pandas.DataFrame o numpy.ndarray")
         
         # Validate shapes
         if X.shape[0] > y.shape[0]:
             # we obtain the number of measuring of y
             m = y.shape[0]
             X = X.iloc[ :m , : ]
+            return X
         elif X.shape[0] < y.shape[0]:
             # we obtain the number of measuring of X
             m = X.shape[0]
             y = y.iloc[ :m , : ]
+            return y
+
+
         # Validate numeric parameters
         if not (0 < eta < 1):
             raise ValueError(f'eta must be between 0 and 1, received: {eta}')
@@ -155,6 +156,7 @@ class PCR:
             raise ValueError(f'numComponents must be positive, received: {numComponents}')
         
         logger.info("Input validation completed successfully")
+        
 
     def _initialize_variables(self, X, y, eta, numEpochs, test_size, random_state, numComponents):
         """Class variables initialization"""
@@ -169,6 +171,8 @@ class PCR:
         logger.debug(f"Parameters: eta={eta}, epochs={numEpochs}, test_size={test_size}, components={numComponents}")
 
     def _apply_pca(self, numComponents):
+        ''' we transform Xs (dataframe) to numpy array'''
+        self.Xs = self.Xs.values
         """Apply PCA with validations"""
         if numComponents > self.Xs.shape[1]:
             raise ValueError(f'numComponents ({numComponents}) must be less than the number of features ({self.Xs.shape[1]})')
@@ -186,6 +190,9 @@ class PCR:
         logger.debug(f"PCA applied: {self.score.shape}, explained variance: {np.sum(pca.explained_variance_ratio_):.4f}")
 
     def _train_perceptron(self, numEpochs):
+        # Transform ys (DataFrame) to ndarray 
+        self.ys = self.ys.values
+        self.ytrain = self.ytrain.values
         """Perceptron training with convergence monitoring"""
         m = self.score.shape[0]
         n = self.score.shape[1] + 1  # +1 for bias
