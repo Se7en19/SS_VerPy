@@ -26,25 +26,26 @@ logger = logging.getLogger(__name__)
 class PCR:
     def __init__(self):
         """
+
         This function initializes the PCR class.
         
         """
-        # self.df = None
-        # self.X = None
-        # self.y = None
-        # self.test_size = None
-        # self.random_state = None
-        # self.X_train = None
-        # self.X_test = None
-        # self.y_train = None
-        # self.y_test = None
-        # self.eta = None 
-        # self.numEpochs = None
-        # self.numComponents = None
+        self.df = None
+        self.X = None
+        self.y = None
+        self.test_size = None
+        self.random_state = None
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
+        self.eta = None 
+        self.numEpochs = None
+        self.numComponents = None
         
-        # self.training_time = None
-        # self.pca_time = None
-        # self.initialization_time = None
+        self.training_time = None
+        self.pca_time = None
+        self.initialization_time = None
         
     def PCR(self, X, y, eta, numEpochs, test_size, random_state, numComponents):
         """
@@ -77,8 +78,8 @@ class PCR:
         logger.info(f"Initialization time: {self.initialization_time:.4f} seconds")
 
         # Data cleaning
-        self.X = X.copy()
-        self.y = y.copy()
+        # self.X = X.copy()
+        # self.y = y.copy()
         logger.info("Cleaning data...")
         cleaner = cd.CleanData()
         self.X = cleaner.clean_nans(self.X)
@@ -192,7 +193,7 @@ class PCR:
     def _train_perceptron(self, numEpochs):
         # Transform ys (DataFrame) to ndarray 
         self.ys = self.ys.values
-        self.ytrain = self.ytrain.values
+        self.y_train = self.y_train.values
         """Perceptron training with convergence monitoring"""
         m = self.score.shape[0]
         n = self.score.shape[1] + 1  # +1 for bias
@@ -226,7 +227,7 @@ class PCR:
             
             # Compute MSE in original scale
             ypred_original = y_pred * self.ystd + self.yprom
-            current_mse = np.sqrt(np.sum((ypred_original.flatten() - self.y_train.values.flatten())**2) / m)
+            current_mse = np.sqrt(np.sum((ypred_original.flatten() - self.y_train.flatten())**2) / m)
             self.MSE[i] = current_mse
             
             # Convergence monitoring

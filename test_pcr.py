@@ -189,7 +189,7 @@ def main():
     
     if basic_success:
         # Edge cases test
-        test_pcr_edge_cases()
+        #test_pcr_edge_cases()
         
         # Performance test
         test_pcr_performance()

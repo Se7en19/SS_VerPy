@@ -32,6 +32,7 @@ class CleanData:
         ValueError: If the arguments are not valid.
         -------
         '''
+        self.df = df.copy()
         # Validate X and y
         if self.df is None:
             raise TypeError('The input cant be None')
