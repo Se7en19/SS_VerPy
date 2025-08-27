@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 class Standardization:
     def __init__(self):
+
+        self.X = None
+        self.y = None
         
     def standardize(self,X,y):
         '''
@@ -43,7 +46,7 @@ class Standardization:
         logger.debug("Validating inputs...")
 
         self.X = X.copy()
-        self.y=y.copy()
+        self.y = y.copy()
 
         # Validate X and y
         if self.X is None or self.y is None:
@@ -59,7 +62,7 @@ class Standardization:
             raise TypeError("y debe ser pandas.DataFrame o numpy.ndarray")
 
         self.X = self.X.values if isinstance(self.X, pd.DataFrame) else self.X
-        self.y = self.y.values if isinstance(self.X, pd.DataFrame) else self.y
+        self.y = self.y.values if isinstance(self.y, pd.DataFrame) else self.y
 
         
         Xprom = np.mean(self.X, axis=0)
@@ -70,6 +73,9 @@ class Standardization:
         yprom = np.mean(self.y, axis=0)
         ystd = np.std(self.y, axis=0)
         ys = (self.y-yprom)/ystd
+
+        Xs = pd.DataFrame(Xs)
+        ys = pd.DataFrame(ys)
 
         return Xs,ys,yprom,ystd,Xprom,Xstd
 
