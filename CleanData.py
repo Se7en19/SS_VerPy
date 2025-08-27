@@ -32,13 +32,16 @@ class CleanData:
         ValueError: If the arguments are not valid.
         -------
         '''
-        # Validate input df
-        if df is None:
-            raise TypeError('df must be a pandas DataFrame or numpy array')
-        if isinstance(df, np.ndarray):
-            df = pd.DataFrame(df)
-        elif not isinstance(df, pd.DataFrame):
-            raise TypeError('df must be a pandas DataFrame or numpy array')
+        self.df = df.copy()
+        # Validate X and y
+        if self.df is None:
+            raise TypeError('The input cant be None')
+        
+        # Validate types
+        valid_types = (pd.DataFrame)
+
+        if not isinstance(self.df, valid_types):
+            raise TypeError("X debe ser pandas.DataFrame")
 
         # Validate axis and method
         if axis not in (0, 1):
